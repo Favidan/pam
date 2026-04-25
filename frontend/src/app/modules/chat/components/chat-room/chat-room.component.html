@@ -1,0 +1,81 @@
+<div class="room-layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <span class="brand">💬 Chat</span>
+    </div>
+    <div class="room-info">
+      <div class="room-name"># {{ room }}</div>
+      <div class="room-meta">
+        <span class="status-dot" [class]="status()"></span>
+        <span class="status-label">{{ status() }}</span>
+      </div>
+      <div class="online-count">{{ onlineUsers() }} online</div>
+    </div>
+    <div class="user-section">
+      <div class="user-tag">
+        <span class="avatar">{{ author[0].toUpperCase() }}</span>
+        <span class="username">{{ author }}</span>
+      </div>
+    </div>
+    <button class="btn btn-leave" (click)="leaveRoom()">← Leave room</button>
+  </aside>
+
+  <!-- Main -->
+  <main class="chat-main">
+
+    <!-- Top bar -->
+    <header class="chat-header">
+      <span class="header-room"># {{ room }}</span>
+      <span class="header-meta">{{ onlineUsers() }} people online</span>
+    </header>
+
+    <!-- Messages -->
+    <ul class="message-list" #messageList>
+      @if (loadingHistory()) {
+        <li class="state-msg">Loading history…</li>
+      }
+
+      @for (msg of messages(); track $index) {
+        @if (msg.type === 'system') {
+          <li class="msg-system">{{ msg.content }}</li>
+        } @else {
+          <li class="msg-row" [class.own]="isOwn(msg)">
+            @if (!isOwn(msg)) {
+              <div class="avatar">{{ msg.author[0].toUpperCase() }}</div>
+            }
+            <div class="bubble-group">
+              @if (!isOwn(msg)) {
+                <span class="bubble-author">{{ msg.author }}</span>
+              }
+              <div class="bubble">{{ msg.content }}</div>
+              @if (msg.created_at) {
+                <span class="bubble-time">
+                  {{ msg.created_at | date:'HH:mm' }}
+                </span>
+              }
+            </div>
+            @if (isOwn(msg)) {
+              <div class="avatar own">{{ msg.author[0].toUpperCase() }}</div>
+            }
+          </li>
+        }
+      }
+    </ul>
+
+    <!-- Input -->
+    <form class="chat-input" (ngSubmit)="send()">
+      <textarea
+        [formControl]="inputCtrl"
+        placeholder="Message #{{ room }}  (Enter to send)"
+        rows="1"
+        (keydown)="onKeydown($event)"
+      ></textarea>
+      <button type="submit" class="btn btn-send" [disabled]="inputCtrl.invalid || status() !== 'connected'">
+        Send
+      </button>
+    </form>
+
+  </main>
+</div>

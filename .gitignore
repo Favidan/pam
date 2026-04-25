@@ -1,0 +1,16 @@
+# Created by https://www.gitignore.io/api/django
+# Edit at https://www.gitignore.io/?templates=django
+
+### Django ###
+*.log
+*.pot
+*.pyc
+*.json
+.pytest_cache
+.idea
+.vscode
+.venv
+.env
+.angular
+__pycache__/
+node_modules

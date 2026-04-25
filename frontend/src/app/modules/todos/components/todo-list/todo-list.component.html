@@ -1,0 +1,56 @@
+<div class="todo-page">
+  <header class="todo-header">
+    <h1>Todo List</h1>
+    <button class="btn btn-primary" (click)="onNew()">+ New Todo</button>
+  </header>
+
+  <div class="filters">
+    <button class="btn" [class.active]="filterCompleted() === undefined" (click)="setFilter(undefined)">All</button>
+    <button class="btn" [class.active]="filterCompleted() === false" (click)="setFilter(false)">Active</button>
+    <button class="btn" [class.active]="filterCompleted() === true" (click)="setFilter(true)">Completed</button>
+  </div>
+
+  @if (showForm()) {
+    <app-todo-form
+      [todo]="editingTodo()"
+      (saved)="onSaved()"
+      (cancelled)="onCancel()">
+    </app-todo-form>
+  }
+
+  @if (loading()) {
+    <div class="loading">Loading...</div>
+  } @else if (error()) {
+    <div class="error">{{ error() }}</div>
+  } @else if (todos().length === 0) {
+    <div class="empty">No todos yet. Create one!</div>
+  } @else {
+    <ul class="todo-list">
+      @for (todo of todos(); track todo.id) {
+        <li class="todo-item" [class.completed]="todo.completed">
+          <input
+            type="checkbox"
+            [checked]="todo.completed"
+            (change)="onToggle(todo)"
+          />
+          <div class="todo-content">
+            <span class="todo-title">{{ todo.title }}</span>
+            @if (todo.description) {
+              <span class="todo-description">{{ todo.description }}</span>
+            }
+          </div>
+          <div class="todo-actions">
+            <button class="btn btn-sm" (click)="onEdit(todo)">Edit</button>
+            <button class="btn btn-sm btn-danger" (click)="onDelete(todo.id)">Delete</button>
+          </div>
+        </li>
+      }
+    </ul>
+
+    <div class="pagination">
+      <button class="btn btn-sm" [disabled]="page() === 1" (click)="prevPage()">Prev</button>
+      <span>Page {{ page() }} — {{ total() }} total</span>
+      <button class="btn btn-sm" [disabled]="page() * size() >= total()" (click)="nextPage()">Next</button>
+    </div>
+  }
+</div>

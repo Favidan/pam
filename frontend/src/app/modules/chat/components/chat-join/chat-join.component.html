@@ -1,0 +1,49 @@
+<div class="join-page">
+  <div class="join-card">
+    <div class="join-icon">💬</div>
+    <h1>Chat Rooms</h1>
+    <p class="subtitle">Pick a username and enter a room to start chatting.</p>
+
+    <form [formGroup]="form" (ngSubmit)="onJoin()">
+      <div class="field">
+        <label for="author">Your name</label>
+        <input
+          id="author"
+          type="text"
+          formControlName="author"
+          placeholder="e.g. Alice"
+          autocomplete="off"
+        />
+      </div>
+
+      <div class="field">
+        <label for="room">Room name</label>
+        <input
+          id="room"
+          type="text"
+          formControlName="room"
+          placeholder="e.g. general"
+          autocomplete="off"
+        />
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-join" [disabled]="form.invalid">
+        Join Room →
+      </button>
+    </form>
+
+    @if (rooms().length > 0) {
+      <div class="active-rooms">
+        <h3>Active rooms</h3>
+        <ul>
+          @for (r of rooms(); track r.name) {
+            <li (click)="selectRoom(r.name)" [class.selected]="form.get('room')?.value === r.name">
+              <span class="room-name"># {{ r.name }}</span>
+              <span class="room-users">{{ r.connected_users }} online</span>
+            </li>
+          }
+        </ul>
+      </div>
+    }
+  </div>
+</div>
