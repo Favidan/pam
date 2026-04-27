@@ -1,0 +1,122 @@
+<div class="rim-page">
+  <header class="rim-header">
+    <h1>Risks &amp; Issues</h1>
+    <button class="btn btn-primary" (click)="onNew()">+ New</button>
+  </header>
+
+  @if (alerts().length > 0) {
+    <div class="alert-banner">
+      <strong>&#9888; Deadline Alert</strong> — {{ alerts().length }} item(s) due within 7 days or overdue:
+      <ul class="alert-list">
+        @for (a of alerts(); track a.id) {
+          <li>
+            <span class="badge" [class]="'badge-' + a.type">{{ a.type }}</span>
+            <strong>{{ a.title }}</strong>
+            <span class="deadline-label" [class.overdue]="a.is_overdue">
+              {{ deadlineLabel(a) }}
+            </span>
+          </li>
+        }
+      </ul>
+    </div>
+  }
+
+  @if (showForm()) {
+    <app-risk-issue-form
+      [item]="editingItem()"
+      (saved)="onSaved()"
+      (cancelled)="onCancel()">
+    </app-risk-issue-form>
+  }
+
+  <div class="filters">
+    <div class="filter-group">
+      <span class="filter-label">Type:</span>
+      <button class="btn btn-sm" [class.active]="filterType() === undefined" (click)="setTypeFilter(undefined)">All</button>
+      <button class="btn btn-sm" [class.active]="filterType() === 'risk'" (click)="setTypeFilter('risk')">Risks</button>
+      <button class="btn btn-sm" [class.active]="filterType() === 'issue'" (click)="setTypeFilter('issue')">Issues</button>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">Status:</span>
+      <button class="btn btn-sm" [class.active]="filterStatus() === undefined" (click)="setStatusFilter(undefined)">All</button>
+      <button class="btn btn-sm" [class.active]="filterStatus() === 'open'" (click)="setStatusFilter('open')">Open</button>
+      <button class="btn btn-sm" [class.active]="filterStatus() === 'in_progress'" (click)="setStatusFilter('in_progress')">In Progress</button>
+      <button class="btn btn-sm" [class.active]="filterStatus() === 'resolved'" (click)="setStatusFilter('resolved')">Resolved</button>
+      <button class="btn btn-sm" [class.active]="filterStatus() === 'closed'" (click)="setStatusFilter('closed')">Closed</button>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="loading">Loading...</div>
+  } @else if (error()) {
+    <div class="error">{{ error() }}</div>
+  } @else if (items().length === 0) {
+    <div class="empty">No items found. Create your first risk or issue!</div>
+  } @else {
+    <div class="rim-table-wrapper">
+      <table class="rim-table">
+        <thead>
+          <tr>
+            <th>Type</th>
+            <th>Title</th>
+            <th>Status</th>
+            <th>Priority</th>
+            <th>Impact</th>
+            <th>Owner</th>
+            <th>Due Date</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of items(); track item.id) {
+            <tr [class.row-overdue]="item.is_overdue" [class.row-warning]="!item.is_overdue && item.days_until_due !== null && item.days_until_due <= 7">
+              <td>
+                <span class="badge" [class]="'badge-' + item.type">{{ item.type }}</span>
+              </td>
+              <td class="col-title">
+                <div class="title-text">{{ item.title }}</div>
+                @if (item.description) {
+                  <div class="desc-text">{{ item.description }}</div>
+                }
+              </td>
+              <td>
+                <span class="status-badge" [class]="'status-' + item.status">
+                  {{ formatStatus(item.status) }}
+                </span>
+              </td>
+              <td>
+                <span class="priority-badge" [class]="'priority-' + item.priority">{{ item.priority }}</span>
+              </td>
+              <td>{{ item.impact ?? '—' }}</td>
+              <td>{{ item.owner ?? '—' }}</td>
+              <td>
+                @if (item.due_date) {
+                  <div class="due-cell">
+                    <span>{{ item.due_date }}</span>
+                    @if (item.days_until_due !== null && item.status !== 'resolved' && item.status !== 'closed') {
+                      <span class="deadline-label" [class.overdue]="item.is_overdue">
+                        {{ deadlineLabel(item) }}
+                      </span>
+                    }
+                  </div>
+                } @else {
+                  —
+                }
+              </td>
+              <td class="col-actions">
+                <button class="btn btn-sm" (click)="onEdit(item)">Edit</button>
+                <button class="btn btn-sm btn-danger" (click)="onDelete(item.id)">Delete</button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pagination">
+      <button class="btn btn-sm" [disabled]="page() === 1" (click)="prevPage()">Prev</button>
+      <span>Page {{ page() }} — {{ total() }} total</span>
+      <button class="btn btn-sm" [disabled]="page() * size() >= total()" (click)="nextPage()">Next</button>
+    </div>
+  }
+</div>

@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/app.component.scss"],
+  "sourcesContent": [".navbar {\n  display: flex;\n  align-items: center;\n  gap: 1.5rem;\n  padding: 0.875rem 2rem;\n  background: #1e293b;\n  color: #f1f5f9;\n\n  .brand {\n    font-weight: 700;\n    font-size: 1.1rem;\n    margin-right: auto;\n  }\n\n  a {\n    color: #94a3b8;\n    text-decoration: none;\n    font-size: 0.9rem;\n    transition: color 0.15s;\n\n    &:hover,\n    &.active {\n      color: #f1f5f9;\n    }\n  }\n}\n\n.main-content {\n  min-height: calc(100vh - 52px);\n  background: #f8fafc;\n}\n"],
+  "mappings": ";AAAA,CAAA;AACE,WAAA;AACA,eAAA;AACA,OAAA;AACA,WAAA,SAAA;AACA,cAAA;AACA,SAAA;;AAEA,CARF,OAQE,CAAA;AACE,eAAA;AACA,aAAA;AACA,gBAAA;;AAGF,CAdF,OAcE;AACE,SAAA;AACA,mBAAA;AACA,aAAA;AACA,cAAA,MAAA;;AAEA,CApBJ,OAoBI,CAAA;AAAA,CApBJ,OAoBI,CAAA,CAAA;AAEE,SAAA;;AAKN,CAAA;AACE,cAAA,KAAA,MAAA,EAAA;AACA,cAAA;;",
+  "names": []
+}

@@ -1,4 +1,4 @@
-# TodoApp — FastAPI + Angular
+# PAM — FastAPI + Angular
 
 Modular, horizontally scalable full-stack application.  
 Two modules shipped: **Todos** (REST CRUD) and **Chat** (real-time WebSocket).
@@ -15,12 +15,13 @@ Two modules shipped: **Todos** (REST CRUD) and **Chat** (real-time WebSocket).
    - [Data Flow](#data-flow)
 4. [Setup & Local Development](#setup--local-development)
 5. [Running the App](#running-the-app)
-6. [API Reference](#api-reference)
-7. [Design Decisions](#design-decisions)
-8. [Adding a New Module](#adding-a-new-module)
-9. [Switching to PostgreSQL](#switching-to-postgresql)
-10. [Docker (full stack)](#docker-full-stack)
-11. [Horizontal Scaling](#horizontal-scaling)
+6. [Troubleshooting](#troubleshooting)
+7. [API Reference](#api-reference)
+8. [Design Decisions](#design-decisions)
+9. [Adding a New Module](#adding-a-new-module)
+10. [Switching to PostgreSQL](#switching-to-postgresql)
+11. [Docker (full stack)](#docker-full-stack)
+12. [Horizontal Scaling](#horizontal-scaling)
 
 ---
 
@@ -44,7 +45,7 @@ Two modules shipped: **Todos** (REST CRUD) and **Chat** (real-time WebSocket).
 ## Project Structure
 
 ```
-todoapp/
+pam/
 │
 ├── backend/
 │   ├── app/
@@ -246,12 +247,39 @@ ChatWsService.messages$  ← Observable<ChatMessage>
 
 | Tool | Minimum version | Notes |
 |---|---|---|
-| Python | 3.12 | Python 3.14 works but required `pydantic>=2.11` for native wheels |
+| Python | 3.12 | Python 3.14 works but requires `pydantic>=2.11` for native wheels |
 | Node.js | 18 | 20+ recommended |
 | npm | 9+ | bundled with Node |
 | Git | any | — |
 
 > **Python 3.14 note:** `pydantic-core` < 2.46 has no Python 3.14 wheel and will attempt a Rust build that fails. `requirements.txt` already pins `pydantic>=2.11` which ships a 3.14 wheel (`pydantic-core 2.46+`).
+
+---
+
+### Initial configuration
+
+Before running the app for the first time, copy the example environment file and adjust any values you need:
+
+**Windows (Command Prompt):**
+```bat
+copy backend\.env.example backend\.env
+```
+
+**macOS / Linux / Git Bash:**
+```bash
+cp backend/.env.example backend/.env
+```
+
+The defaults work out of the box for local development. Edit `backend\.env` only if you need non-default values:
+
+| Variable | Default | Description |
+|---|---|---|
+| `APP_NAME` | `PAM` | Shown in OpenAPI docs title |
+| `APP_ENV` | `development` | Set to `production` to disable SQL echo |
+| `DATABASE_URL` | `sqlite+aiosqlite:///./pam.db` | Async SQLAlchemy URL |
+| `CORS_ORIGINS` | `["http://localhost:4200"]` | JSON array of allowed origins |
+
+The SQLite database file (`pam.db`) is created automatically on first startup — no database setup required.
 
 ---
 
@@ -264,29 +292,19 @@ cd backend
 python -m venv .venv
 
 # 2. Activate
-# macOS / Linux:
-source .venv/bin/activate
+# Windows (Command Prompt):
+.venv\Scripts\activate
 # Windows (PowerShell):
 .venv\Scripts\Activate.ps1
-# Windows (bash / Git Bash):
-.venv/Scripts/activate
+# macOS / Linux / Git Bash:
+source .venv/bin/activate
 
 # 3. Install dependencies
 pip install -r requirements.txt
-
-# 4. Configure environment
-cp .env.example .env
-# Edit .env if you need non-default values (see table below)
 ```
 
-#### Environment variables (`.env`)
-
-| Variable | Default | Description |
-|---|---|---|
-| `APP_NAME` | `TodoApp` | Shown in OpenAPI docs title |
-| `APP_ENV` | `development` | Set to `production` to disable SQL echo |
-| `DATABASE_URL` | `sqlite+aiosqlite:///./todoapp.db` | Async SQLAlchemy URL |
-| `CORS_ORIGINS` | `["http://localhost:4200"]` | JSON array of allowed origins |
+> **Important — do not move or rename the project folder after creating the venv.**  
+> Python virtual environments store absolute paths internally. If you move the folder, the venv breaks. See [Troubleshooting](#troubleshooting) for the fix.
 
 ---
 
@@ -325,11 +343,31 @@ Angular 19 defaults all generated components to `standalone: true`. Since this p
 
 ## Running the App
 
-### Terminal 1 — Backend
+### Option A — Quick start (Windows)
+
+From the project root, double-click `start.bat` or run it in a terminal:
+
+```bat
+start.bat
+```
+
+This opens two separate terminal windows (backend + frontend) and automatically opens `http://localhost:4200` in your browser after 20 seconds.
+
+**Prerequisites:** the `.venv` and `node_modules` must already exist (run the setup steps above first). The script checks for both and prints a clear error message if either is missing.
+
+---
+
+### Option B — Manual (two terminals)
+
+**Terminal 1 — Backend**
 
 ```bash
 cd backend
-source .venv/bin/activate   # or .venv\Scripts\activate on Windows
+
+# Windows:
+.venv\Scripts\activate
+# macOS / Linux:
+source .venv/bin/activate
 
 uvicorn app.main:app --reload
 ```
@@ -342,7 +380,7 @@ uvicorn app.main:app --reload
 | `http://localhost:8000/api/redoc` | ReDoc |
 | `ws://localhost:8000/api/v1/chat/{room}/ws?author=Alice` | Chat WebSocket |
 
-### Terminal 2 — Frontend
+**Terminal 2 — Frontend**
 
 ```bash
 cd frontend
@@ -352,6 +390,68 @@ npm start
 App: **http://localhost:4200**
 
 The dev server proxies `/api/*` requests to `http://localhost:8000` via `proxy.conf.json`. WebSocket connections go directly to port 8000 (the proxy config does not relay WebSocket frames in all environments).
+
+---
+
+## Troubleshooting
+
+### "Fatal error in launcher: Unable to create process" (broken venv path)
+
+**Symptom:** After moving or renaming the project folder, running `uvicorn` (or any venv command) fails with:
+
+```
+Fatal error in launcher: Unable to create process using
+'"C:\old\path\backend\.venv\Scripts\python.exe" ...'
+The system cannot find the file specified.
+```
+
+**Cause:** Python virtual environments store absolute paths in their launcher scripts and `pyvenv.cfg`. When the folder is moved or renamed, those paths become stale.
+
+**Fix:** Delete the venv and recreate it from scratch. The venv contains no project data — only installed packages.
+
+```bat
+cd backend
+rmdir /s /q .venv
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+On macOS / Linux:
+```bash
+cd backend
+rm -rf .venv
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+The `pam.db` database file and your `.env` are unaffected.
+
+---
+
+### `start.bat` opens windows but services fail to start
+
+1. **"The system cannot find the path specified"** in the backend window → broken venv path, see above.
+2. **"'npm' is not recognized"** → Node.js is not installed or not on `PATH`. Install from [nodejs.org](https://nodejs.org) and restart your terminal.
+3. **"node_modules not found" error in the launcher** → run `npm install` in the `frontend` folder first.
+4. **"Python venv not found" error in the launcher** → run the backend setup steps first (create venv, `pip install`).
+
+---
+
+### Port already in use
+
+If port 8000 or 4200 is already occupied:
+
+```bash
+# Backend on a different port:
+uvicorn app.main:app --reload --port 8001
+
+# Frontend on a different port:
+npm start -- --port 4201
+```
+
+If you change the backend port, also update `CORS_ORIGINS` in `.env` and the proxy target in `frontend/proxy.conf.json`.
 
 ---
 
@@ -589,7 +689,7 @@ asyncpg>=0.30.0
 
 **2. Update `.env`**
 ```env
-DATABASE_URL=postgresql+asyncpg://user:password@host:5432/todoapp
+DATABASE_URL=postgresql+asyncpg://user:password@host:5432/pam
 ```
 
 No code changes required — SQLAlchemy and the app factory are already database-agnostic.
@@ -634,7 +734,7 @@ docker compose down
     │              └── /api/*        → proxies to backend:8000
     │
     └── :8000 → [Uvicorn container]  (direct access / Swagger)
-                    └── todoapp.db   (volume-mounted)
+                    └── pam.db   (volume-mounted)
 ```
 
 To add a PostgreSQL container instead of SQLite, extend `docker-compose.yml`:
@@ -644,15 +744,15 @@ services:
   db:
     image: postgres:17-alpine
     environment:
-      POSTGRES_USER: todoapp
+      POSTGRES_USER: pam
       POSTGRES_PASSWORD: secret
-      POSTGRES_DB: todoapp
+      POSTGRES_DB: pam
     volumes:
       - pg_data:/var/lib/postgresql/data
 
   backend:
     environment:
-      - DATABASE_URL=postgresql+asyncpg://todoapp:secret@db:5432/todoapp
+      - DATABASE_URL=postgresql+asyncpg://pam:secret@db:5432/pam
     depends_on:
       - db
 

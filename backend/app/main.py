@@ -5,6 +5,7 @@ from app.core.config import settings
 from app.core.database import init_db
 from app.modules.todos import router as todos_router
 from app.modules.chat import router as chat_router
+from app.modules.risks_issues import router as risks_issues_router
 
 
 @asynccontextmanager
@@ -32,6 +33,7 @@ def create_app() -> FastAPI:
 
     app.include_router(todos_router, prefix="/api/v1")
     app.include_router(chat_router, prefix="/api/v1")
+    app.include_router(risks_issues_router, prefix="/api/v1")
 
     return app
 

@@ -1,10 +1,10 @@
 @echo off
-title TodoApp — Launcher
+title PAM - Launcher
 color 0A
 
 echo.
 echo  ================================
-echo   TodoApp — Starting services...
+echo   PAM - Starting services...
 echo  ================================
 echo.
 
@@ -34,7 +34,7 @@ if not exist "frontend\node_modules" (
 
 :: ── Start Backend ──────────────────────────────────────────────────
 echo [1/2] Starting FastAPI backend on http://localhost:8000 ...
-start "TodoApp — Backend" cmd /k ^
+start "PAM - Backend" cmd /k ^
     "cd /d %~dp0backend && ^
     call .venv\Scripts\activate && ^
     echo. && ^
@@ -48,7 +48,7 @@ start "TodoApp — Backend" cmd /k ^
 timeout /t 3 /nobreak >nul
 
 echo [2/2] Starting Angular frontend on http://localhost:4200 ...
-start "TodoApp — Frontend" cmd /k ^
+start "PAM - Frontend" cmd /k ^
     "cd /d %~dp0frontend && ^
     echo. && ^
     echo  Frontend running at http://localhost:4200 && ^
@@ -58,10 +58,10 @@ start "TodoApp — Frontend" cmd /k ^
 
 :: ── Open browser after a short delay ──────────────────────────────
 echo.
-echo  Both services are starting. Opening browser in 8 seconds...
-echo  (close this window at any time — the servers keep running)
+echo  Both services are starting. Opening browser in 20 seconds...
+echo  (close this window at any time - the servers keep running)
 echo.
-timeout /t 8 /nobreak >nul
+timeout /t 20 /nobreak >nul
 start "" "http://localhost:4200"
 
 exit
