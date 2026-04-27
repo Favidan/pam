@@ -1,0 +1,33 @@
+<div class="detail-page">
+  <button class="btn-link" (click)="back()">← Back to search</button>
+
+  <div *ngIf="loading()" class="loading">Loading...</div>
+  <div *ngIf="error()" class="error">{{ error() }}</div>
+
+  <ng-container *ngIf="file() as f">
+    <header class="detail-header">
+      <h1>{{ f.filename }}</h1>
+      <a *ngIf="f.source_type === 'local'" class="btn" [href]="downloadUrl()" target="_blank">Download</a>
+    </header>
+
+    <table class="meta-table">
+      <tr><th>Path</th><td>{{ f.full_path }}</td></tr>
+      <tr><th>Source</th><td>{{ f.source_type }}</td></tr>
+      <tr><th>Extension</th><td>{{ f.extension || '—' }}</td></tr>
+      <tr><th>MIME</th><td>{{ f.mime_type || '—' }}</td></tr>
+      <tr><th>Size</th><td>{{ f.size_bytes !== null ? f.size_bytes + ' bytes' : '—' }}</td></tr>
+      <tr><th>Modified at source</th><td>{{ f.modified_at_source || '—' }}</td></tr>
+      <tr><th>Last indexed</th><td>{{ f.last_indexed_at || '—' }}</td></tr>
+      <tr><th>Hash</th><td><code>{{ f.content_hash || '—' }}</code></td></tr>
+      <tr *ngIf="f.is_deleted"><th>Status</th><td><span class="deleted-badge">Soft-deleted</span></td></tr>
+    </table>
+
+    <section class="content-section" *ngIf="f.extracted_text">
+      <h2>Extracted text</h2>
+      <pre class="extracted">{{ f.extracted_text }}</pre>
+    </section>
+    <p class="no-content" *ngIf="!f.extracted_text">
+      No extracted text. (Binary file or extraction skipped.)
+    </p>
+  </ng-container>
+</div>

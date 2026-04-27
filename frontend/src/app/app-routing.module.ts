@@ -15,6 +15,10 @@ const routes: Routes = [
     path: 'risks-issues',
     loadChildren: () => import('./modules/risks-issues/risks-issues.module').then(m => m.RisksIssuesModule),
   },
+  {
+    path: 'indexation',
+    loadChildren: () => import('./modules/indexation/indexation.module').then(m => m.IndexationModule),
+  },
   { path: '**', redirectTo: 'todos' },
 ];
 

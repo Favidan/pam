@@ -1,0 +1,103 @@
+<div class="idx-page">
+  <header class="idx-header">
+    <h1>File Search</h1>
+    <a routerLink="/indexation/admin" class="btn btn-secondary">Admin</a>
+  </header>
+
+  <div class="search-bar">
+    <input
+      type="search"
+      placeholder="Search filenames and content..."
+      [value]="text"
+      (input)="onTextChange($any($event.target).value)"
+      autofocus
+    />
+  </div>
+
+  <div class="search-body">
+    <aside class="filters">
+      <div class="filter-group">
+        <div class="filter-label">Source</div>
+        <ng-container *ngFor="let bucket of results()?.facets?.['source_type'] || []">
+          <label class="chip">
+            <input
+              type="checkbox"
+              [checked]="selectedSources().has($any(bucket.value))"
+              (change)="toggleSource($any(bucket.value))"
+            />
+            {{ bucket.value }} <span class="count">({{ bucket.count }})</span>
+          </label>
+        </ng-container>
+      </div>
+
+      <div class="filter-group">
+        <div class="filter-label">Extension</div>
+        <ng-container *ngFor="let bucket of results()?.facets?.['extension'] || []">
+          <label class="chip">
+            <input
+              type="checkbox"
+              [checked]="selectedExtensions().has(bucket.value)"
+              (change)="toggleExtension(bucket.value)"
+            />
+            {{ bucket.value }} <span class="count">({{ bucket.count }})</span>
+          </label>
+        </ng-container>
+      </div>
+
+      <div class="filter-group">
+        <div class="filter-label">Sort</div>
+        <select [value]="sort()" (change)="setSort($any($event.target).value)">
+          <option value="relevance">Relevance</option>
+          <option value="modified_desc">Most recent</option>
+          <option value="name_asc">Name (A→Z)</option>
+        </select>
+      </div>
+    </aside>
+
+    <section class="results">
+      <div class="results-meta" *ngIf="results() as r">
+        <span>{{ r.total }} result{{ r.total === 1 ? '' : 's' }}</span>
+        <span class="page-info">Page {{ r.page }}</span>
+      </div>
+
+      <div *ngIf="loading()" class="loading">Searching...</div>
+
+      <div *ngIf="!loading() && results() && results()!.items.length === 0" class="empty">
+        No files match your search.
+      </div>
+
+      <ul class="result-list" *ngIf="!loading() && results() as r">
+        <li
+          class="result-item"
+          *ngFor="let item of r.items"
+          (click)="openFile(item.id)"
+        >
+          <div class="result-row1">
+            <span class="filename">{{ item.filename }}</span>
+            <span class="badge badge-source">{{ item.source_type }}</span>
+            <span *ngIf="item.extension" class="badge badge-ext">.{{ item.extension }}</span>
+          </div>
+          <div class="result-path">{{ item.full_path }}</div>
+          <div *ngIf="item.snippet" class="result-snippet" [innerHTML]="item.snippet | safeSnippet"></div>
+          <div class="result-meta">
+            <span *ngIf="item.size_bytes !== null">{{ formatBytes(item.size_bytes) }}</span>
+            <span *ngIf="item.modified_at_source">Modified {{ formatDate(item.modified_at_source) }}</span>
+            <span class="rank">rank {{ item.rank }}</span>
+          </div>
+        </li>
+      </ul>
+
+      <div class="pagination" *ngIf="results() as r">
+        <button class="btn" [disabled]="r.page <= 1" (click)="prevPage()">Prev</button>
+        <span>Page {{ r.page }} of {{ totalPages(r.total, r.page_size) }}</span>
+        <button
+          class="btn"
+          [disabled]="r.page * r.page_size >= r.total"
+          (click)="nextPage()"
+        >
+          Next
+        </button>
+      </div>
+    </section>
+  </div>
+</div>

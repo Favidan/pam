@@ -1,0 +1,131 @@
+<div class="admin-page">
+  <header class="admin-header">
+    <h1>Indexation Admin</h1>
+    <a routerLink="/indexation/search" class="btn-secondary">← Search</a>
+  </header>
+
+  <div *ngIf="error()" class="error-banner">{{ error() }}</div>
+
+  <section class="latest-card" *ngIf="latest() as j">
+    <div class="latest-row">
+      <div>
+        <div class="caption">Latest job</div>
+        <div class="title">
+          <span class="status-badge" [class]="'status-' + j.status">{{ j.status }}</span>
+          <span class="trigger">triggered by {{ j.triggered_by }}</span>
+        </div>
+      </div>
+      <div class="counters">
+        <div><strong>{{ j.files_added }}</strong><span>added</span></div>
+        <div><strong>{{ j.files_updated }}</strong><span>updated</span></div>
+        <div><strong>{{ j.files_deleted }}</strong><span>deleted</span></div>
+        <div><strong>{{ j.files_failed }}</strong><span>failed</span></div>
+        <div><strong>{{ jobDuration(j) }}</strong><span>duration</span></div>
+      </div>
+      <button class="btn primary" [disabled]="triggering() || j.status === 'running'" (click)="triggerJob()">
+        {{ j.status === 'running' ? 'Running...' : 'Run indexation now' }}
+      </button>
+    </div>
+    <div *ngIf="j.error_message" class="error-detail">{{ j.error_message }}</div>
+  </section>
+
+  <section class="stats-card" *ngIf="stats() as s">
+    <h2>Index Stats</h2>
+    <div class="stats-grid">
+      <div><strong>{{ s.total_files }}</strong><span>indexed files</span></div>
+      <div><strong>{{ s.total_deleted }}</strong><span>soft-deleted</span></div>
+      <div><strong>{{ s.total_size_bytes }}</strong><span>total bytes</span></div>
+    </div>
+  </section>
+
+  <section class="sources-card">
+    <div class="sources-header">
+      <h2>Sources</h2>
+      <button class="btn" (click)="showAdd()" *ngIf="!showAddForm()">+ Add source</button>
+    </div>
+
+    <form *ngIf="showAddForm()" class="add-form" (submit)="submitAdd(); $event.preventDefault()">
+      <label>
+        Name
+        <input type="text" [(ngModel)]="newName" name="newName" />
+      </label>
+      <label>
+        Type
+        <select [(ngModel)]="newType" name="newType">
+          <option value="local">local</option>
+        </select>
+      </label>
+      <label>
+        Root path
+        <input type="text" [(ngModel)]="newRoot" name="newRoot" placeholder="e.g. C:\Users\Public\Documents" />
+      </label>
+      <div class="form-actions">
+        <button type="button" class="btn" (click)="cancelAdd()">Cancel</button>
+        <button type="submit" class="btn primary">Save</button>
+      </div>
+    </form>
+
+    <table class="sources-table" *ngIf="sources().length > 0">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Config</th>
+          <th>Last run</th>
+          <th>Enabled</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let s of sources()">
+          <td>{{ s.name }}</td>
+          <td>{{ s.source_type }}</td>
+          <td><code>{{ s.config | json }}</code></td>
+          <td>{{ s.last_run_at || '—' }}</td>
+          <td>
+            <input type="checkbox" [checked]="s.enabled" (change)="toggleSource(s)" />
+          </td>
+          <td>
+            <button class="btn-link danger" (click)="deleteSource(s)">Delete</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <p *ngIf="sources().length === 0" class="empty">
+      No sources configured yet. Add one to start indexing.
+    </p>
+  </section>
+
+  <section class="history-card">
+    <h2>Job History</h2>
+    <table class="jobs-table" *ngIf="jobs().length > 0">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Status</th>
+          <th>Trigger</th>
+          <th>Started</th>
+          <th>Duration</th>
+          <th>Added</th>
+          <th>Updated</th>
+          <th>Deleted</th>
+          <th>Failed</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let j of jobs()">
+          <td>{{ j.id }}</td>
+          <td><span class="status-badge" [class]="'status-' + j.status">{{ j.status }}</span></td>
+          <td>{{ j.triggered_by }}</td>
+          <td>{{ j.started_at }}</td>
+          <td>{{ jobDuration(j) }}</td>
+          <td>{{ j.files_added }}</td>
+          <td>{{ j.files_updated }}</td>
+          <td>{{ j.files_deleted }}</td>
+          <td>{{ j.files_failed }}</td>
+        </tr>
+      </tbody>
+    </table>
+    <p *ngIf="jobs().length === 0" class="empty">No jobs yet. Trigger one above to start.</p>
+  </section>
+</div>
