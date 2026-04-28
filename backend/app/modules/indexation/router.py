@@ -133,13 +133,14 @@ async def get_job(job_id: int, service: IndexationService = Depends(get_service)
     status_code=status.HTTP_202_ACCEPTED,
 )
 async def trigger_job(
+    background_tasks: BackgroundTasks,
     payload: JobRunRequest = JobRunRequest(),
-    background_tasks: BackgroundTasks = None,
 ):
     """Manually trigger an indexation run.
 
     Returns 202 immediately; the job runs as a FastAPI background task. Poll
-    GET /jobs/{id} for progress. Returns 409 if a run is already in flight.
+    GET /jobs or GET /jobs/{id} for progress.
+    Returns 409 if a run is already in flight.
     """
     from app.modules.indexation.workers.indexer import _job_lock
 
@@ -155,9 +156,8 @@ async def trigger_job(
         except JobAlreadyRunningError:
             pass
 
-    # We can't easily get the job ID before the task starts (it is created
-    # inside run_job). Instead, return a placeholder ID and let the client
-    # discover the running job via GET /jobs.
+    # The job ID is created inside run_job; return job_id=0 here and let
+    # the client discover the running job via GET /jobs.
     background_tasks.add_task(_runner)
     return JobRunResponse(job_id=0, status=JobStatus.running)
 

@@ -6,10 +6,34 @@
 
   <div *ngIf="error()" class="error-banner">{{ error() }}</div>
 
+  <!-- Run trigger — always visible regardless of whether any job exists yet -->
+  <section class="trigger-card">
+    <div class="trigger-row">
+      <div class="trigger-info">
+        <strong>Manual indexation</strong>
+        <span *ngIf="isRunning()" class="running-hint">Job is running — counters update live below</span>
+        <span *ngIf="!isRunning() && !triggering()" class="idle-hint">
+          {{ latest() ? 'Last run: ' + formatDate(latest()!.started_at) : 'No runs yet' }}
+        </span>
+        <span *ngIf="triggering()" class="idle-hint">Starting job…</span>
+      </div>
+      <button
+        class="btn primary"
+        [disabled]="triggering() || isRunning()"
+        (click)="triggerJob()"
+      >
+        <span *ngIf="isRunning()">⏳ Running…</span>
+        <span *ngIf="triggering() && !isRunning()">Starting…</span>
+        <span *ngIf="!triggering() && !isRunning()">▶ Run indexation now</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- Latest-job status card — only shown once a job exists -->
   <section class="latest-card" *ngIf="latest() as j">
     <div class="latest-row">
       <div>
-        <div class="caption">Latest job</div>
+        <div class="caption">Latest job #{{ j.id }}</div>
         <div class="title">
           <span class="status-badge" [class]="'status-' + j.status">{{ j.status }}</span>
           <span class="trigger">triggered by {{ j.triggered_by }}</span>
@@ -22,9 +46,6 @@
         <div><strong>{{ j.files_failed }}</strong><span>failed</span></div>
         <div><strong>{{ jobDuration(j) }}</strong><span>duration</span></div>
       </div>
-      <button class="btn primary" [disabled]="triggering() || j.status === 'running'" (click)="triggerJob()">
-        {{ j.status === 'running' ? 'Running...' : 'Run indexation now' }}
-      </button>
     </div>
     <div *ngIf="j.error_message" class="error-detail">{{ j.error_message }}</div>
   </section>

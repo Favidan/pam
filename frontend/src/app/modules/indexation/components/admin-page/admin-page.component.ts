@@ -20,6 +20,7 @@ export class AdminPageComponent implements OnInit, OnDestroy {
   latest = signal<JobSummary | null>(null);
   stats = signal<IndexationStats | null>(null);
   sources = signal<SourceConfig[]>([]);
+  /** True from click until the 202 response arrives (prevents double-click) */
   triggering = signal(false);
   error = signal<string | null>(null);
 
@@ -40,8 +41,13 @@ export class AdminPageComponent implements OnInit, OnDestroy {
     this.loadAll();
     this.latestSub = this.polling.watchLatest().subscribe(j => {
       this.latest.set(j);
-      // Refresh job list whenever the latest job transitions
+      // Once the server confirms a running job, clear the "Starting…" state
+      if (j?.status === 'running') {
+        this.triggering.set(false);
+      }
+      // Refresh full list and stats whenever a job finishes
       if (j && j.status !== 'running') {
+        this.triggering.set(false);
         this.loadJobs();
         this.loadStats();
       }
@@ -50,6 +56,11 @@ export class AdminPageComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.latestSub?.unsubscribe();
+  }
+
+  /** Returns true when a job is actively running on the server */
+  isRunning(): boolean {
+    return this.latest()?.status === 'running';
   }
 
   loadAll(): void {
@@ -74,11 +85,14 @@ export class AdminPageComponent implements OnInit, OnDestroy {
   }
 
   triggerJob(): void {
+    if (this.triggering() || this.isRunning()) return;  // guard against double-click
     this.triggering.set(true);
     this.error.set(null);
     this.api.triggerJob().subscribe({
       next: () => {
-        this.triggering.set(false);
+        // 202 received — job is queued. Keep triggering=true until polling
+        // confirms the job is running (handled in the subscription above).
+        // Refresh the jobs list so the new row appears quickly.
         this.loadJobs();
       },
       error: err => {
@@ -141,5 +155,10 @@ export class AdminPageComponent implements OnInit, OnDestroy {
     const minutes = Math.floor(seconds / 60);
     const rem = seconds % 60;
     return `${minutes}m ${rem}s`;
+  }
+
+  formatDate(value: string | null): string {
+    if (!value) return '—';
+    return new Date(value).toLocaleString();
   }
 }

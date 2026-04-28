@@ -28,7 +28,7 @@
   margin-bottom: 1rem;
 }
 
-.latest-card, .stats-card, .sources-card, .history-card {
+.trigger-card, .latest-card, .stats-card, .sources-card, .history-card {
   background: #fff;
   border: 1px solid var(--border, #e5e7eb);
   border-radius: 8px;
@@ -41,6 +41,25 @@
     text-transform: uppercase;
     color: var(--text-secondary, #6b7280);
     letter-spacing: 0.04em;
+  }
+}
+
+.trigger-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+
+  .trigger-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+
+    strong { font-size: 1rem; }
+
+    .running-hint { font-size: 0.82rem; color: #1d4ed8; }
+    .idle-hint    { font-size: 0.82rem; color: var(--text-secondary, #6b7280); }
   }
 }
 
