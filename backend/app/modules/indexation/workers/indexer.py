@@ -180,7 +180,7 @@ async def _process_change(
     stats: JobStats,
 ) -> None:
     async with AsyncSessionLocal() as session:
-        existing = await _find_existing(session, source.source_type, change.source_id)
+        existing = await _find_existing(session, source.id, change.source_id)
 
         if change.is_deleted:
             if existing and not existing.is_deleted:
@@ -261,6 +261,7 @@ async def _process_change(
             file_id = existing.id
         else:
             new_file = IndexedFile(
+                source_config_id=source.id,
                 source_type=source.source_type,
                 source_id=change.source_id,
                 filename=change.filename,
@@ -297,11 +298,11 @@ async def _process_change(
 
 
 async def _find_existing(
-    session: AsyncSession, source_type: SourceType, source_id: str
+    session: AsyncSession, source_config_id: int, source_id: str
 ) -> Optional[IndexedFile]:
     result = await session.execute(
         select(IndexedFile).where(
-            IndexedFile.source_type == source_type,
+            IndexedFile.source_config_id == source_config_id,
             IndexedFile.source_id == source_id,
         )
     )
@@ -315,7 +316,7 @@ async def _reconcile_deletions(
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(IndexedFile.id, IndexedFile.source_id).where(
-                IndexedFile.source_type == source.source_type,
+                IndexedFile.source_config_id == source.id,
                 IndexedFile.is_deleted.is_(False),
             )
         )

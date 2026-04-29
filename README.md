@@ -612,6 +612,16 @@ curl -X POST http://localhost:8000/api/v1/indexation/jobs/run
 
 ---
 
+### Search returns only files from the last-indexed folder
+
+Fixed. Earlier builds keyed `IndexedFile` rows on `(source_type, source_id)` only. When a job processed a second `local` source, the deletion-reconciliation step queried *all* non-deleted local files and soft-deleted everything that wasn't under the second folder's root — wiping the first folder from search results.
+
+The schema now has an `IndexedFile.source_config_id` foreign key on `source_configs.id`, the unique key is `(source_config_id, source_id)`, and `_reconcile_deletions` scopes its query by `source_config_id`. Multiple folders of the same `source_type` now coexist correctly.
+
+If you have a `pam.db` from before the fix, delete it (no Alembic migration is shipped — `Base.metadata.create_all` does not add columns to existing tables) and re-run the indexer.
+
+---
+
 ## API Reference
 
 ### Todos

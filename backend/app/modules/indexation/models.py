@@ -39,6 +39,12 @@ class IndexedFile(Base, TimestampMixin):
     __tablename__ = "indexed_files"
 
     id = Column(Integer, primary_key=True, index=True)
+    source_config_id = Column(
+        Integer,
+        ForeignKey("source_configs.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
     source_type = Column(Enum(SourceType), nullable=False)
     source_id = Column(Text, nullable=False)
     filename = Column(Text, nullable=False)
@@ -58,9 +64,12 @@ class IndexedFile(Base, TimestampMixin):
         back_populates="file",
         cascade="all, delete-orphan",
     )
+    source_config = relationship("SourceConfig", back_populates="files")
 
     __table_args__ = (
-        UniqueConstraint("source_type", "source_id", name="uq_indexed_files_source"),
+        UniqueConstraint(
+            "source_config_id", "source_id", name="uq_indexed_files_source"
+        ),
         Index("ix_indexed_files_source_modified", "source_type", "modified_at_source"),
         Index("ix_indexed_files_filename", "filename"),
     )
@@ -108,3 +117,9 @@ class SourceConfig(Base, TimestampMixin):
     config = Column(JSON, nullable=False, default=dict)
     last_run_token = Column(Text, nullable=True)
     last_run_at = Column(DateTime(timezone=True), nullable=True)
+
+    files = relationship(
+        "IndexedFile",
+        back_populates="source_config",
+        cascade="all, delete-orphan",
+    )
