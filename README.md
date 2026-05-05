@@ -38,7 +38,7 @@ Four modules shipped: **Todos** (REST CRUD), **Chat** (real-time WebSocket), **R
 | Backend | FastAPI | 0.115.x |
 | ORM | SQLAlchemy (async) | 2.0.x |
 | Validation | Pydantic v2 + pydantic-settings | 2.11+ |
-| DB driver | aiosqlite (dev) / asyncpg (prod) | — |
+| DB driver | psycopg v3 (default) / aiosqlite (fallback) | — |
 | ASGI server | Uvicorn | 0.32.x |
 | Scheduler | APScheduler (AsyncIOScheduler) | 3.10.x |
 | HTTP client (backend) | httpx | 0.28.x |
@@ -101,6 +101,8 @@ pam/
 │   │               ├── extractor.py         ← Plain-text content extraction
 │   │               ├── indexer.py           ← Job orchestration, per-file processing, hash dedup
 │   │               └── scheduler.py         ← APScheduler daily cron bootstrap
+│   ├── scripts/
+│   │   └── migrate_sqlite_to_postgres.py    ← One-shot ETL: pam.db → Postgres
 │   ├── .env.example
 │   ├── requirements.txt
 │   └── Dockerfile
@@ -415,7 +417,11 @@ All variables live in `backend/.env`. The app reads them via `pydantic-settings`
 |---|---|---|
 | `APP_NAME` | `PAM` | Shown in OpenAPI docs title |
 | `APP_ENV` | `development` | `development` enables SQL echo; `production` disables it |
-| `DATABASE_URL` | `sqlite+aiosqlite:///./pam.db` | Async SQLAlchemy connection URL |
+| `DATABASE_URL` | `postgresql+psycopg://pam:pam@localhost:5432/pam` | Async SQLAlchemy connection URL. SQLite fallback: `sqlite+aiosqlite:///./pam.db` |
+| `DB_POOL_SIZE` | `5` | Connection pool size (Postgres only) |
+| `DB_MAX_OVERFLOW` | `10` | Extra connections allowed beyond `DB_POOL_SIZE` (Postgres only) |
+| `DB_POOL_TIMEOUT` | `30` | Seconds to wait for a free connection before failing (Postgres only) |
+| `DB_POOL_RECYCLE` | `1800` | Recycle connections older than N seconds (Postgres only) |
 | `CORS_ORIGINS` | `["http://localhost:4200"]` | JSON array of allowed CORS origins |
 
 ### Indexation module
@@ -445,7 +451,9 @@ These are referenced in the design but not yet active. Prepare them when adding 
 
 ```env
 APP_ENV=development
-DATABASE_URL=sqlite+aiosqlite:///./pam.db
+DATABASE_URL=postgresql+psycopg://pam:pam@localhost:5432/pam
+# SQLite fallback (uncomment to use instead):
+# DATABASE_URL=sqlite+aiosqlite:///./pam.db
 CORS_ORIGINS=["http://localhost:4200"]
 
 # Indexation
@@ -811,9 +819,9 @@ A WebSocket "request" lasts the entire connection — potentially hours. Opening
 
 Angular Signals (stable since v17) offer synchronous state reads without `BehaviorSubject` subscription boilerplate. They are also change-detection aware, removing the need for `ChangeDetectorRef.markForCheck()` in `OnPush` components.
 
-### Why SQLite for development?
+### Why PostgreSQL by default, SQLite as fallback?
 
-Zero configuration — the DB file is created automatically on first run. Swapping to PostgreSQL requires only one environment variable change (see [Switching to PostgreSQL](#switching-to-postgresql)).
+PostgreSQL is the default for parity with production. The `database.py` engine builder applies pool sizing and `pool_pre_ping` automatically when the URL is Postgres. SQLite (via `aiosqlite`) remains supported as a zero-config fallback for local experiments and tests — see [Switching to PostgreSQL](#switching-to-postgresql) for the full driver/migration story.
 
 ### Why not Tika for content extraction?
 
@@ -968,20 +976,46 @@ Add the component to `notes.module.ts` declarations, add `SharedModule` to impor
 
 ## Switching to PostgreSQL
 
-**1. Add the async driver**
-```bash
-pip install asyncpg
-echo "asyncpg>=0.30.0" >> backend/requirements.txt
+PostgreSQL is the **default** since the move off SQLite. The driver (`psycopg[binary]`) is already in `requirements.txt`. SQLite is kept as a fallback (still listed in `requirements.txt` via `aiosqlite`).
+
+**1. Provision the database**
+
+```sql
+-- as a Postgres superuser:
+CREATE ROLE pam WITH LOGIN PASSWORD '<your-password>';
+CREATE DATABASE pam OWNER pam;
 ```
 
-**2. Update `backend/.env`**
+**2. Configure `backend/.env`**
+
 ```env
-DATABASE_URL=postgresql+asyncpg://user:password@host:5432/pam
+DATABASE_URL=postgresql+psycopg://pam:<your-password>@localhost:5432/pam
+DB_POOL_SIZE=5
+DB_MAX_OVERFLOW=10
+DB_POOL_TIMEOUT=30
+DB_POOL_RECYCLE=1800
 ```
 
-No code changes required — SQLAlchemy and the app factory are database-agnostic.
+> Special characters in the password (`@`, `:`, `/`, `#`, `?`, `%`, space) must be percent-encoded in the URL — e.g. `@` → `%40`.
 
-**3. (Recommended) Use Alembic for migrations**
+**3. Start the app once**
+
+`init_db()` runs `Base.metadata.create_all` on the configured database, creating all tables.
+
+**4. (Optional) Migrate data from a legacy SQLite `pam.db`**
+
+A one-shot ETL script is provided. It copies all rows from `backend/pam.db` into the configured Postgres in dependency order, sanitises NUL bytes (which Postgres `TEXT`/`VARCHAR` reject but SQLite tolerates), commits per-table, and resets PK sequences afterward.
+
+```bash
+cd backend
+.venv\Scripts\activate            # or source .venv/bin/activate
+python -m scripts.migrate_sqlite_to_postgres
+```
+
+Stop the FastAPI app first to avoid write contention. The script reads `DATABASE_URL` from your `.env` and refuses to run unless the target is Postgres.
+
+**5. (Recommended) Use Alembic for migrations**
+
 ```bash
 pip install alembic
 alembic init alembic
@@ -993,9 +1027,17 @@ alembic revision --autogenerate -m "initial"
 alembic upgrade head
 ```
 
-**4. Indexation full-text search upgrade**
+**6. Indexation full-text search upgrade**
 
-When migrating to PostgreSQL, replace the LIKE-based search in `service.py` with the `tsvector` / `ts_headline` SQL shown in the design document (section 5.2). The `IndexationService.search()` method interface is unchanged — only the query body needs updating.
+The current LIKE-based search in `service.py` works on Postgres but does not exploit it. Swap it for `tsvector` / `ts_headline` SQL (see the indexation design document, section 5.2). The `IndexationService.search()` method signature is unchanged — only the query body needs updating.
+
+### Falling back to SQLite
+
+```env
+DATABASE_URL=sqlite+aiosqlite:///./pam.db
+```
+
+The pool settings (`DB_POOL_*`) are ignored when the URL is SQLite.
 
 ---
 
@@ -1043,7 +1085,7 @@ services:
 
   backend:
     environment:
-      - DATABASE_URL=postgresql+asyncpg://pam:secret@db:5432/pam
+      - DATABASE_URL=postgresql+psycopg://pam:secret@db:5432/pam
     depends_on:
       - db
 

@@ -10,7 +10,7 @@ export class ChatWsService implements OnDestroy {
 
   private get wsBase(): string {
     const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host  = (window as Window & { __WS_HOST__?: string }).__WS_HOST__ ?? 'localhost:8000';
+    const host  = (window as Window & { __WS_HOST__?: string }).__WS_HOST__ ?? '127.0.0.1:8000';
     return `${proto}//${host}/api/v1`;
   }
 
